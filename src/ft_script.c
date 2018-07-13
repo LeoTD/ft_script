@@ -1,56 +1,21 @@
+#include "ft_script.h"
 
-
-int			main(int argc, char **argv)
+static int		transcribe_content(void)
 {
-	int					master;
-	int					slave;
-	int					file
-	int					rc;
-	char				fname[] = "afile";
-	struct termios		custom_term, normal_term;
-	struct winsize		win;
-
-	if ((file = open(fname, O_WRONLY | O_CREAT)) == NULL)
+	g_writer_pid = fork();
+	if (g_writer_pid < 0)
 		;//ERROR
-	tcgetattr(STDIN_FILENO, &normal_term);
-	tcgetattr(STDIN_FILENO, &custom_term);
-	ioctl(STDIN_FILENO, TIOCGWINSZ, &win);
-
-	/* This is not a system call */
-	if (openpty(&master, &slave, NULL, &normal_term, &win) == -1)
-		;//ERROR
-
-	printf("Script begins here:\n");
-	st_makeraw(&custom);
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &custom);
-
-	signal(SIGCHLD, script_finish);
-
-	transcribe_content(master, slave, file);
-
-	return (0);
-}
-
-int				transcribe_content(int master, int slave, int file)
-{
-	int					writer_pid;
-	int					shell_pid;
-
-	writer_pid = fork();
-	if (writer_pid < 0)
-		;//ERROR
-	if (writer_pid == 0)
+	if (g_writer_pid == 0)
 	{
-		shell_pid = fork();
-		if (shell_pid < 0)
+		g_shell_pid = fork();
+		if (g_shell_pid < 0)
 			;//ERROR
-		if (shell_pid == 0)
-			become_shell(master, slave, file);
+		if (g_shell_pid == 0)
+			return (become_shell());
 		else
-			become_writer(master, slave, file);
+			return (become_writer());
 	}
-	become_operator(master, slave, file);
-	return (0);
+	return (become_operator());
 }
 
 static int		st_makeraw(struct termios *t)
@@ -66,7 +31,74 @@ static int		st_makeraw(struct termios *t)
 	return (0);
 }
 
-void			script_finish(int signo)
+void			script_sig(int signo)
 {
-	printf("script_finish() called!\n");
+	int					status;
+	int					done;
+	int					pid;
+
+	signo = 0;
+	done = 0;
+	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
+		if (pid == g_shell_pid)
+			done = 1;
+	if (done)
+		script_exit();
+}
+
+void			script_exit(void)
+{
+	time_t				tstamp;
+
+	if (g_writer_pid == 0)
+	{
+		tstamp = time(NULL);
+		ft_putstr_fd("Transcript ends: ", g_file);
+		ft_putstr_fd(ctime(&tstamp), g_file);
+		ft_putstr_fd("\n", g_file);
+		close(g_master);
+		close(g_file);
+	}
+	else
+	{
+		ft_putstr_fd("Script complete. Stored in: ", STDOUT_FILENO);
+		ft_putstr_fd(g_fname, STDOUT_FILENO);
+		ft_putstr_fd("\n", STDOUT_FILENO);
+	}
+	exit(0);
+}
+
+int			main(int argc, char **argv, char **env)
+{
+	struct termios		custom_term;
+	struct termios		normal_term;
+	struct winsize		win;
+
+	g_env = env;
+	if (argc > 1)
+		g_fname = argv[1];
+	else
+		g_fname = ft_strdup("typescript");
+	if ((g_file = open(g_fname, O_WRONLY | O_CREAT)) < 0)
+		;//ERROR
+	tcgetattr(STDIN_FILENO, &normal_term);
+	tcgetattr(STDIN_FILENO, &custom_term);
+	ioctl(STDIN_FILENO, TIOCGWINSZ, &win);
+
+	/* This is not a system call */
+	if (openpty(&g_master, &g_slave, NULL, &normal_term, &win) == -1)
+		;//ERROR
+
+	ft_putstr_fd("Script begins here:\n", STDOUT_FILENO);
+	st_makeraw(&custom_term);
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &custom_term);
+
+	signal(SIGCHLD, script_sig);
+
+	if (transcribe_content())
+		return (-1);//ERROR
+	free(g_fname);
+	tcsetattr(STDIN_FILENO, TCSAFLUSH, &normal_term);
+	script_exit();
+	return (-1);
 }
