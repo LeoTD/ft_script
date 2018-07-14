@@ -6,7 +6,7 @@
 /*   By: ltanenba <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/07/12 02:25:29 by ltanenba          #+#    #+#             */
-/*   Updated: 2018/07/13 15:05:34 by ltanenba         ###   ########.fr       */
+/*   Updated: 2018/07/13 18:36:50 by ltanenba         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,23 +17,25 @@
 # include <time.h>
 # include <unistd.h>
 # include <termios.h>
-
-# include <util.h> //!!!!!!!~~
+# include <fcntl.h>
+# include <sys/stat.h>
+# include <sys/types.h>
 
 # define BUF_SIZE 256
 
-char			**g_env;
 int				g_master;
 int				g_slave;
 int				g_file;
 int				g_writer_pid;
 int				g_shell_pid;
 char			*g_fname;
+struct termios	g_normal_term;
 
 /*
 ** Function Declarations:
 */
 
+int				transcribe_content(void);
 void			script_sig(int signo);
 void			script_exit(void);
 

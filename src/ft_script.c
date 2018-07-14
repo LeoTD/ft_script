@@ -1,33 +1,27 @@
-#include "ft_script.h"
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ft_script.c                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: ltanenba <marvin@42.fr>                    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2018/07/13 18:44:08 by ltanenba          #+#    #+#             */
+/*   Updated: 2018/07/13 18:45:58 by ltanenba         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
-static int		transcribe_content(void)
-{
-	g_writer_pid = fork();
-	if (g_writer_pid < 0)
-		;//ERROR
-	if (g_writer_pid == 0)
-	{
-		g_shell_pid = fork();
-		if (g_shell_pid < 0)
-			;//ERROR
-		if (g_shell_pid == 0)
-			return (become_shell());
-		else
-			return (become_writer());
-	}
-	return (become_operator());
-}
+#include "ft_script.h"
 
 static int		st_makeraw(struct termios *t)
 {
-	t->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | 
+	t->c_iflag &= ~(IGNBRK | BRKINT | PARMRK |
 			ISTRIP | INLCR | IGNCR | ICRNL | IXON);
 	t->c_oflag &= ~(OPOST);
 	t->c_cflag &= ~(CSIZE | PARENB);
 	t->c_cflag |= CS8;
 	t->c_lflag &= ~(ICANON | ECHO | ECHONL | IEXTEN | ISIG);
-//	t->c_cc[VMIN] = 1;
-//	t->c_cc[VTIME] = 0;
+	t->c_cc[VMIN] = 1;
+	t->c_cc[VTIME] = 0;
 	return (0);
 }
 
@@ -40,7 +34,7 @@ void			script_sig(int signo)
 	signo = 0;
 	done = 0;
 	while ((pid = wait3(&status, WNOHANG, 0)) > 0)
-		if (pid == g_shell_pid)
+		if (pid == g_writer_pid)
 			done = 1;
 	if (done)
 		script_exit();
@@ -50,7 +44,7 @@ void			script_exit(void)
 {
 	time_t				tstamp;
 
-	if (g_writer_pid == 0)
+	if (g_shell_pid)
 	{
 		tstamp = time(NULL);
 		ft_putstr_fd("Transcript ends: ", g_file);
@@ -61,6 +55,7 @@ void			script_exit(void)
 	}
 	else
 	{
+		tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_normal_term);
 		ft_putstr_fd("Script complete. Stored in: ", STDOUT_FILENO);
 		ft_putstr_fd(g_fname, STDOUT_FILENO);
 		ft_putstr_fd("\n", STDOUT_FILENO);
@@ -68,37 +63,42 @@ void			script_exit(void)
 	exit(0);
 }
 
-int			main(int argc, char **argv, char **env)
+void			create_master_slave_pair(void)
+{
+	struct winsize		win;
+	char				slave_name[256];
+
+	ioctl(STDIN_FILENO, TIOCGWINSZ, &win);
+	g_master = open("/dev/ptmx", O_RDWR);
+	ioctl(g_master, TIOCPTYGRANT, 0);
+	ioctl(g_master, TIOCPTYUNLK, 0);
+	ioctl(g_master, TIOCPTYGNAME, slave_name);
+	g_slave = open(slave_name, O_RDWR);
+	ioctl(g_slave, TIOCSETAF, &g_normal_term);
+	ioctl(g_slave, TIOCGWINSZ, &win);
+}
+
+int				main(int argc, char **argv, char **env)
 {
 	struct termios		custom_term;
-	struct termios		normal_term;
-	struct winsize		win;
 
-	g_env = env;
+	g_environ = env;
 	if (argc > 1)
 		g_fname = argv[1];
 	else
-		g_fname = ft_strdup("typescript");
-	if ((g_file = open(g_fname, O_WRONLY | O_CREAT)) < 0)
-		;//ERROR
-	tcgetattr(STDIN_FILENO, &normal_term);
-	tcgetattr(STDIN_FILENO, &custom_term);
-	ioctl(STDIN_FILENO, TIOCGWINSZ, &win);
-
-	/* This is not a system call */
-	if (openpty(&g_master, &g_slave, NULL, &normal_term, &win) == -1)
-		;//ERROR
-
-	ft_putstr_fd("Script begins here:\n", STDOUT_FILENO);
+		g_fname = "typescript";
+	if ((g_file = open(g_fname, O_RDWR | O_CREAT,
+					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0)
+		return (-1);
+	ioctl(STDIN_FILENO, TIOCGETA, &g_normal_term);
+	create_master_slave_pair();
+	custom_term = g_normal_term;
 	st_makeraw(&custom_term);
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &custom_term);
-
+	ioctl(STDIN_FILENO, TIOCSETAF, &custom_term);
 	signal(SIGCHLD, script_sig);
-
+	ft_putstr_fd("Script begins here:\n", STDOUT_FILENO);
 	if (transcribe_content())
-		return (-1);//ERROR
-	free(g_fname);
-	tcsetattr(STDIN_FILENO, TCSAFLUSH, &normal_term);
+		return (-1);
 	script_exit();
 	return (-1);
 }
