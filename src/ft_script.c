@@ -6,7 +6,7 @@
 /*   By: ltanenba <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/07/13 18:44:08 by ltanenba          #+#    #+#             */
-/*   Updated: 2018/07/13 18:45:58 by ltanenba         ###   ########.fr       */
+/*   Updated: 2018/07/16 15:17:25 by ltanenba         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,25 +42,30 @@ void			script_sig(int signo)
 
 void			script_exit(void)
 {
-	time_t				tstamp;
+	struct timeval		tstamp;
 
 	if (g_shell_pid)
 	{
-		tstamp = time(NULL);
-		ft_putstr_fd("Transcript ends: ", g_file);
-		ft_putstr_fd(ctime(&tstamp), g_file);
-		ft_putstr_fd("\n", g_file);
+		if (gettimeofday(&tstamp, NULL))
+			;//ERROR
+		if (!(g_flags & q_FLAG))
+		{
+			ft_putstr_fd("Transcript ends: ", g_file);
+			ft_putendl_fd(ctime(&tstamp.tv_sec), g_file);
+		}
 		close(g_master);
 		close(g_file);
 	}
 	else
 	{
-		tcsetattr(STDIN_FILENO, TCSAFLUSH, &g_normal_term);
-		ft_putstr_fd("Script complete. Stored in: ", STDOUT_FILENO);
-		ft_putstr_fd(g_fname, STDOUT_FILENO);
-		ft_putstr_fd("\n", STDOUT_FILENO);
+		ioctl(STDIN_FILENO, TIOCSETAF, &g_normal_term);
+		if (!(g_flags & q_FLAG))
+		{
+			ft_putstr_fd("Script complete. Stored in: ", STDOUT_FILENO);
+			ft_putendl_fd(g_fname, STDOUT_FILENO);
+		}
 	}
-	exit(0);
+	_exit(0);
 }
 
 void			create_master_slave_pair(void)
@@ -83,12 +88,10 @@ int				main(int argc, char **argv, char **env)
 	struct termios		custom_term;
 
 	g_environ = env;
-	if (argc > 1)
-		g_fname = argv[1];
-	else
-		g_fname = "typescript";
-	if ((g_file = open(g_fname, O_RDWR | O_CREAT,
-					S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0)
+	if (parse_flags(argc, argv))
+		return (usage());
+	if ((g_file = open(g_fname, (g_flags & a_FLAG ? O_APPEND : O_TRUNC) |
+			O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH)) < 0)
 		return (-1);
 	ioctl(STDIN_FILENO, TIOCGETA, &g_normal_term);
 	create_master_slave_pair();
@@ -96,7 +99,8 @@ int				main(int argc, char **argv, char **env)
 	st_makeraw(&custom_term);
 	ioctl(STDIN_FILENO, TIOCSETAF, &custom_term);
 	signal(SIGCHLD, script_sig);
-	ft_putstr_fd("Script begins here:\n", STDOUT_FILENO);
+	if (!(g_flags & q_FLAG))
+		ft_putstr_fd("Script begins here:\n\r", STDOUT_FILENO);
 	if (transcribe_content())
 		return (-1);
 	script_exit();

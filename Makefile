@@ -26,6 +26,7 @@ INCLUDES	= libft/inc/libft.h \
 # Add source files here: (files assumed to be in ./src folder)
 FILES		= ft_script.c \
 			  roles.c \
+			  parse_flags.c
 
 SRC			= $(addprefix src/, $(FILES))
 
