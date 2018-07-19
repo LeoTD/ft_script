@@ -6,17 +6,16 @@
 /*   By: ltanenba <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/07/16 21:05:46 by ltanenba          #+#    #+#             */
-/*   Updated: 2018/07/16 21:05:48 by ltanenba         ###   ########.fr       */
+/*   Updated: 2018/07/18 20:52:49 by ltanenba         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_script.h"
 
-# include <stdio.h>
-
 int					usage(void)
 {
-	ft_putendl("usage: ft_script [-aq] [-F pipe [command ...]] <or> [file [command ...]]");
+	ft_putstr("usage: ft_script [-aq] ");
+	ft_putendl("[-F pipe [command ...]] <or> [file [command ...]]");
 	return (0);
 }
 
