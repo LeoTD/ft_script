@@ -6,22 +6,26 @@
 /*   By: ltanenba <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/07/13 18:47:06 by ltanenba          #+#    #+#             */
-/*   Updated: 2018/07/16 20:28:56 by ltanenba         ###   ########.fr       */
+/*   Updated: 2018/07/18 18:53:18 by ltanenba         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_script.h"
+#define ENV_MAX_LEN 4096
 
 static void		st_exec_command(void)
 {
 	char				*curr;
 	char				*pcopy;
-	char				*buf;
+	char				buf[256];
+	char				pbuf[ENV_MAX_LEN];
 	int					i;
 
 	i = -1;
-	pcopy = ft_strdup(ft_getenv("PATH"));
-	buf = ft_strnew(ft_strlen(pcopy) + ft_strlen(g_cmd_args[0]));
+	ft_bzero(buf, 256);
+	ft_bzero(pbuf, ENV_MAX_LEN);
+	ft_strcpy(pbuf, ft_getenv("PATH"));
+	pcopy = pbuf;
 	ft_putstr("command: ");
 	ft_putargs(g_cmd_args);
 	ft_putchar('\n');
@@ -33,6 +37,7 @@ static void		st_exec_command(void)
 		ft_strcat(buf, g_cmd_args[0]);
 		execve(buf, g_cmd_args, g_environ);
 	}
+	ft_putstr("cmd exec failed!\n");
 }
 
 int				become_shell(void)
@@ -67,8 +72,7 @@ int				become_writer(void)
 
 	close(STDIN_FILENO);
 	close(g_slave);
-	if (gettimeofday(&tstamp, NULL))
-		;//ERROR
+	gettimeofday(&tstamp, NULL);
 	if (!(g_flags & q_FLAG))
 	{
 		ft_putstr_fd("Transcript begins: ", g_file);

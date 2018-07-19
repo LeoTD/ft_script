@@ -6,7 +6,7 @@
 /*   By: ltanenba <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2018/07/13 18:44:08 by ltanenba          #+#    #+#             */
-/*   Updated: 2018/07/16 15:17:25 by ltanenba         ###   ########.fr       */
+/*   Updated: 2018/07/16 21:03:49 by ltanenba         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,8 +46,7 @@ void			script_exit(void)
 
 	if (g_shell_pid)
 	{
-		if (gettimeofday(&tstamp, NULL))
-			;//ERROR
+		gettimeofday(&tstamp, NULL);
 		if (!(g_flags & q_FLAG))
 		{
 			ft_putstr_fd("Transcript ends: ", g_file);
