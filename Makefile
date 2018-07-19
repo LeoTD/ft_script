@@ -38,8 +38,14 @@ $(NAME): $(LIBS) $(SRC) $(INCLUDES)
 	@printf "%b" "$(LIB_COLOR)Compiling: $(OK_COLOR)$@\n$(NO_COLOR)"
 	@$(CC) $(DEBUG) $(CFLAGS) $(INC_FLAGS) -o $(NAME) $(SRC) $(LIBS)
 
-$(LIBS):
+$(LIBS): libft/src
 	@make -C libft
+
+libft/src:
+	@cd libft
+	@git submodule init
+	@git submodule update
+	@cd -
 
 clean:
 	@printf "Cleaning up $(NAME)...\n"
