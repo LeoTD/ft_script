@@ -42,10 +42,8 @@ $(LIBS): libft/src
 	@make -C libft
 
 libft/src:
-	@cd libft
 	@git submodule init
 	@git submodule update
-	@cd -
 
 clean:
 	@printf "Cleaning up $(NAME)...\n"
